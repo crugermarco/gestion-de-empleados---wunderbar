@@ -4,8 +4,10 @@ import { formatDate } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 import { EmployeeModal } from './EmployeeModal'
 import { EmployeeCard } from './EmployeeCard'
+import { useAuth } from '../../contexts/AuthContext'
 
 export const EmployeesSection = () => {
+  const { canEdit } = useAuth()
   const [employees, setEmployees] = useState([])
   const [filteredEmployees, setFilteredEmployees] = useState([])
   const [loading, setLoading] = useState(true)
@@ -47,10 +49,7 @@ export const EmployeesSection = () => {
     }
   }
 
-  const canEdit = () => {
-    const user = JSON.parse(localStorage.getItem('userSession') || '{}')
-    return user.USUARIO?.toLowerCase() === 'marco cruger'
-  }
+
 
   const isImageUrl = (url) => url && (url.includes('http') || url.includes('https') || url.includes('.jpg') || url.includes('.png') || url.includes('drive.google.com'))
 

@@ -1,8 +1,26 @@
 import { jsPDF } from 'jspdf'
 
+// Función para cargar imagen como base64
+const loadImageAsBase64 = (url) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0)
+      const dataURL = canvas.toDataURL('image/png')
+      resolve(dataURL)
+    }
+    img.onerror = () => reject(new Error(`No se pudo cargar la imagen: ${url}`))
+    img.src = url
+  })
+}
+
 export async function generateVacationPDFDirect(vacationData) {
   try {
-    const { jsPDF } = window.jspdf || { jsPDF: (await import('jspdf')).jsPDF }
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -22,39 +40,60 @@ export async function generateVacationPDFDirect(vacationData) {
     const anio = today.getFullYear()
     const fechaHoy = `${diaSemana}, ${dia} de ${mes} de ${anio}`
     
-    const logoHeight = 25
-    const logoWidth = 50
-    const logoTopMargin = 20
+    const logoHeight = 20
+    const logoWidth = 40
+    const logoTopMargin = 15
     
-    // Intentar cargar logos (opcional)
+    // Intentar cargar los logos
     try {
-      // Puedes agregar logos si los tienes en public/logos/
-      // const leftLogoImg = await loadImage('/logos/ivemsa.png')
-      // doc.addImage(leftLogoImg, 'JPEG', margin, logoTopMargin, logoWidth, logoHeight)
-    } catch (error) {}
+      // Logo izquierdo (IVEMSA)
+      const leftLogoUrl = '/logos/ivemsa.png'
+      const leftLogoBase64 = await loadImageAsBase64(leftLogoUrl)
+      doc.addImage(leftLogoBase64, 'PNG', margin, logoTopMargin, logoWidth, logoHeight)
+    } catch (error) {
+      console.warn('Logo izquierdo no cargado:', error.message)
+      // Opcional: texto alternativo
+      doc.setFontSize(8)
+      doc.setTextColor(100, 100, 100)
+      doc.text('IVEMSA', margin + 10, logoTopMargin + 10)
+    }
     
-    const headerYPos = logoTopMargin + logoHeight + 5
+    try {
+      // Logo derecho (Wunderbar)
+      const rightLogoUrl = '/logos/wunderbar.png'
+      const rightLogoBase64 = await loadImageAsBase64(rightLogoUrl)
+      doc.addImage(rightLogoBase64, 'PNG', pageWidth - margin - logoWidth, logoTopMargin, logoWidth, logoHeight)
+    } catch (error) {
+      console.warn('Logo derecho no cargado:', error.message)
+      // Opcional: texto alternativo
+      doc.setFontSize(8)
+      doc.setTextColor(100, 100, 100)
+      doc.text('Wunderbar', pageWidth - margin - 20, logoTopMargin + 10)
+    }
+    
+    const headerYPos = logoTopMargin + logoHeight + 10
     
     doc.setFontSize(20)
     doc.setFont('helvetica', 'bold')
+    doc.setTextColor(0, 0, 0)
     doc.text('VACACIONES', pageWidth / 2, headerYPos, { align: 'center' })
     
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Ensenada, B.C., ${fechaHoy}`, pageWidth / 2, headerYPos + 10, { align: 'left' })
+    doc.text(`Ensenada, B.C., ${fechaHoy}`, margin, headerYPos + 10)
     
     let yPos = headerYPos + 25
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.text('Para:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text('RECURSOS HUMANOS', margin + 15, yPos)
+    doc.text('RECURSOS HUMANOS', margin + 20, yPos)
     
     yPos += 8
     doc.setFont('helvetica', 'bold')
     doc.text('De:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text('Omar Arreola Meza', margin + 15, yPos)
+    doc.text('Omar Arreola Meza', margin + 20, yPos)
     
     yPos += 12
     doc.setFont('helvetica', 'normal')
@@ -64,7 +103,7 @@ export async function generateVacationPDFDirect(vacationData) {
     doc.setFont('helvetica', 'bold')
     doc.text('Nombre:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.nombre || '', margin + 22, yPos)
+    doc.text(vacationData.nombre || '', margin + 25, yPos)
     
     doc.setFont('helvetica', 'bold')
     doc.text('Numero de Empleado:', pageWidth / 2 + 10, yPos)
@@ -75,35 +114,35 @@ export async function generateVacationPDFDirect(vacationData) {
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de ingreso:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaIngreso || '', margin + 38, yPos)
+    doc.text(vacationData.fechaIngreso || '', margin + 42, yPos)
     
     doc.setFont('helvetica', 'bold')
-    doc.text('Dias a gozar:', margin + 80, yPos)
+    doc.text('Dias a gozar:', margin + 85, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.diasTomados || '0', margin + 110, yPos)
+    doc.text(vacationData.diasTomados || '0', margin + 115, yPos)
     
     doc.setFont('helvetica', 'bold')
-    doc.text('Dias a pagar:', margin + 130, yPos)
+    doc.text('Dias a pagar:', margin + 135, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.diasTomados || '0', margin + 160, yPos)
+    doc.text(vacationData.diasTomados || '0', margin + 165, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de pago de vacaciones:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaPago || '', margin + 70, yPos)
+    doc.text(vacationData.fechaPago || '', margin + 75, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de Inicio de Vacaciones:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaSalida || '', margin + 70, yPos)
+    doc.text(vacationData.fechaSalida || '', margin + 78, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de que debera presentarse a trabajar:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaRegreso || '', margin + 95, yPos)
+    doc.text(vacationData.fechaRegreso || '', margin + 105, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
@@ -114,12 +153,10 @@ export async function generateVacationPDFDirect(vacationData) {
     doc.line(margin, yPos, pageWidth - margin, yPos)
     
     yPos += 5
-    doc.setLineWidth(0.3)
     doc.line(margin, yPos, pageWidth - margin, yPos)
     
     if (vacationData.comentarios) {
       yPos += 7
-      doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)
       const comentariosLines = doc.splitTextToSize(vacationData.comentarios, pageWidth - (margin * 2))
       doc.text(comentariosLines, margin, yPos)

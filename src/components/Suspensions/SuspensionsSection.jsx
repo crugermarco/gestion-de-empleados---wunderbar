@@ -8,8 +8,10 @@ import { showNotification } from '../UI/NotificationContainer'
 import { SuspensionModal } from './SuspensionModal'
 import { AppliedSuspensionsTable } from './AppliedSuspensionsTable'
 import { DismissalCandidatesTable } from './DismissalCandidatesTable'
+import { useAuth } from '../../contexts/AuthContext'
 
 export const SuspensionsSection = () => {
+  const { isAuthorizedUser } = useAuth()
   const [suspensionData, setSuspensionData] = useState([])
   const [suspensionCandidates, setSuspensionCandidates] = useState([])
   const [notAppliedSuspensions, setNotAppliedSuspensions] = useState([])
@@ -62,11 +64,7 @@ export const SuspensionsSection = () => {
   }
 
   // Verificar si el usuario está autorizado para aplicar suspensiones
-  const isAuthorizedUser = () => {
-    const user = JSON.parse(localStorage.getItem('userSession') || '{}')
-    return user.USUARIO?.toLowerCase() === 'marco cruger' || 
-           user.USUARIO?.toLowerCase() === 'itati bautista'
-  }
+
 
   return (
     <div>

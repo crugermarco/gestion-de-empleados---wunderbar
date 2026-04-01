@@ -15,12 +15,22 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simular usuario para pruebas - evita el bucle
-    const user = { USUARIO: 'Usuario Demo', ROL: 'user' }
-    setCurrentUser({
-      name: user.USUARIO || 'Usuario',
-      role: user.ROL || 'user'
-    })
+    const userSession = localStorage.getItem('userSession')
+    
+    if (userSession) {
+      const user = JSON.parse(userSession)
+      console.log('🔐 Usuario cargado desde localStorage:', user.USUARIO)
+      setCurrentUser({
+        name: user.USUARIO || 'Usuario',
+        role: user.ROL || 'user'
+      })
+    } else {
+      console.log(' No hay sesión, usando usuario demo')
+      setCurrentUser({
+        name: 'Usuario Demo',
+        role: 'user'
+      })
+    }
     setLoading(false)
   }, [])
 

@@ -4,8 +4,10 @@ import { formatDate } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 import { VacationScheduleModal } from './VacationScheduleModal'
 import { generateVacationPDFDirect } from '../../utils/pdfGenerator'
+import { useAuth } from '../../contexts/AuthContext'
 
 export const VacationsSection = () => {
+  const { canEdit } = useAuth()
   const [vacationData, setVacationData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -182,10 +184,7 @@ export const VacationsSection = () => {
     }
   }
 
-  const canEdit = () => {
-    const user = JSON.parse(localStorage.getItem('userSession') || '{}')
-    return user.USUARIO?.toLowerCase() === 'marco cruger'
-  }
+
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
