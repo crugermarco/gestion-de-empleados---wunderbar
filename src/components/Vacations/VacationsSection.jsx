@@ -5,9 +5,11 @@ import { showNotification } from '../UI/NotificationContainer'
 import { VacationScheduleModal } from './VacationScheduleModal'
 import { generateVacationPDFDirect } from '../../utils/pdfGenerator'
 import { useAuth } from '../../contexts/AuthContext'
+import { VacationCalendar } from './VacationCalendar'
 
 export const VacationsSection = () => {
   const { canEdit } = useAuth()
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [vacationData, setVacationData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -195,6 +197,15 @@ export const VacationsSection = () => {
         <div className="flex justify-between items-center p-6 border-b border-slate-600/30 flex-wrap gap-4">
           <h3 className="text-xl font-bold text-white">CONCENTRADO DE VACACIONES</h3>
           <div className="flex gap-3">
+          <button 
+            onClick={() => setIsCalendarOpen(true)} 
+            className="modern-button bg-gradient-to-r from-blue-600 to-blue-500"
+            >
+              <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Fechas Disponibles
+                  </button>
             <button onClick={exportToExcel} className="modern-button bg-gradient-to-r from-purple-600 to-purple-500">
               <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -357,6 +368,17 @@ export const VacationsSection = () => {
           </table>
         </div>
       </div>
+      {isCalendarOpen && (
+      <VacationCalendar
+       vacationData={vacationData}
+       onClose={() => setIsCalendarOpen(false)}
+       onSelectDate={(year, month, day) => {
+       // Opcional: seleccionar fecha y cerrar calendario
+       setIsCalendarOpen(false)
+       // Aquí podrías abrir el modal de agendar vacaciones con la fecha seleccionada
+      }}
+  />
+)}
 
       <VacationScheduleModal 
         isOpen={isScheduleModalOpen} 
