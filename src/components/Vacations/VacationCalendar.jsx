@@ -21,28 +21,44 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
     if (uniqueAreas.length > 0 && !selectedArea) setSelectedArea(uniqueAreas[0])
   }, [vacationData])
 
-  // Función para parsear fecha en formato mm/dd/yyyy
+  // Función inteligente para parsear fecha (detecta mm/dd/yyyy o dd/mm/yyyy)
   const parseDate = (dateStr) => {
     if (!dateStr) return null
-    const parts = dateStr.split('/')
-    if (parts.length !== 3) return null
+    if (dateStr instanceof Date) return dateStr
     
-    const month = parseInt(parts[0], 10) - 1  // mes primero
-    const day = parseInt(parts[1], 10)        // día segundo
-    const year = parseInt(parts[2], 10)
-    
-    const date = new Date(year, month, day)
-    
-    // Validar que la fecha sea correcta
-    if (date.getMonth() !== month || date.getDate() !== day) {
-      console.warn(`⚠️ Fecha inválida: ${dateStr}`)
-      return null
+    if (typeof dateStr === 'string') {
+      const parts = dateStr.split('/')
+      if (parts.length === 3) {
+        const first = parseInt(parts[0], 10)
+        const second = parseInt(parts[1], 10)
+        const year = parseInt(parts[2], 10)
+        
+        // Si el primer número > 12, es dd/mm/yyyy
+        if (first > 12) {
+          const day = first
+          const month = second - 1
+          const date = new Date(year, month, day)
+          if (!isNaN(date.getTime()) && date.getMonth() === month && date.getDate() === day) {
+            return date
+          }
+        } else {
+          // Intentar como mm/dd/yyyy
+          let date = new Date(year, first - 1, second)
+          if (!isNaN(date.getTime()) && date.getMonth() === first - 1 && date.getDate() === second) {
+            return date
+          }
+          // Intentar como dd/mm/yyyy
+          date = new Date(year, second - 1, first)
+          if (!isNaN(date.getTime()) && date.getMonth() === second - 1 && date.getDate() === first) {
+            return date
+          }
+        }
+      }
     }
-    
-    return date
+    return null
   }
 
-  // Calcular días ocupados y pendientes
+  // Calcular días ocupados y pendientes (solo para el año seleccionado)
   useEffect(() => {
     if (!selectedArea || !vacationData.length) {
       setOccupiedDates({})
@@ -56,9 +72,9 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
     const pending = {}
 
     console.log('📅 Procesando vacaciones para área:', selectedArea)
-    console.log('📅 Total registros:', vacationData.length)
+    console.log('📅 Año seleccionado:', currentYear)
 
-    vacationData.forEach((item, idx) => {
+    vacationData.forEach((item) => {
       if (item['ÁREA'] !== selectedArea) return
 
       const fechaSalida = item['FECHA SALIDA']
@@ -67,11 +83,16 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
       const nombre = item.NOMBRE || ''
 
       if (fechaSalida && fechaRegreso) {
-        const start = parseDate(fechaSalida)   // mm/dd/yyyy
-        const end = parseDate(fechaRegreso)    // mm/dd/yyyy
+        const start = parseDate(fechaSalida)
+        const end = parseDate(fechaRegreso)
         
         if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
           console.warn(`⚠️ Fecha inválida: Salida:${fechaSalida} Regreso:${fechaRegreso}`)
+          return
+        }
+        
+        // Filtrar solo las fechas que pertenecen al año seleccionado
+        if (start.getFullYear() !== currentYear && end.getFullYear() !== currentYear) {
           return
         }
         
@@ -85,13 +106,16 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
           const day = String(current.getDate()).padStart(2, '0')
           const dateStr = `${year}-${month}-${day}`
           
-          if (autorizadas) {
-            if (!occupied[dateStr]) {
-              occupied[dateStr] = { info: `${nombre} (Aprobado)` }
-            }
-          } else {
-            if (!pending[dateStr]) {
-              pending[dateStr] = { info: `${nombre} (Pendiente)` }
+          // Solo guardar fechas del año seleccionado
+          if (year === currentYear) {
+            if (autorizadas) {
+              if (!occupied[dateStr]) {
+                occupied[dateStr] = { info: `${nombre} (Aprobado)` }
+              }
+            } else {
+              if (!pending[dateStr]) {
+                pending[dateStr] = { info: `${nombre} (Pendiente)` }
+              }
             }
           }
           
@@ -106,7 +130,7 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
     setOccupiedDates(occupied)
     setPendingDates(pending)
     setLoading(false)
-  }, [selectedArea, vacationData])
+  }, [selectedArea, vacationData, currentYear])
 
   const isWeekendOrHoliday = (year, month, day) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -139,12 +163,10 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
     const firstDay = getFirstDayOfMonth(currentYear, monthIndex)
     const days = []
     
-    // Días vacíos al inicio
     for (let i = 0; i < firstDay; i++) {
       days.push(<div key={`empty-${monthIndex}-${i}`} className="w-9 h-9"></div>)
     }
     
-    // Días del mes
     for (let day = 1; day <= daysInMonth; day++) {
       const isNonWorking = isWeekendOrHoliday(currentYear, monthIndex, day)
       const dayStatus = getDayStatus(currentYear, monthIndex, day)
@@ -205,7 +227,6 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
           <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
         </div>
         
-        {/* Selector de área */}
         <div className="mb-6">
           <label className="form-label">Seleccionar Área</label>
           <select
@@ -219,21 +240,10 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
           </select>
         </div>
         
-        {/* Navegación de año */}
         <div className="flex justify-between items-center mb-6">
-          <button 
-            onClick={() => changeYear(-1)} 
-            className="modern-button text-sm py-1 px-3"
-          >
-            ◀ {currentYear - 1}
-          </button>
+          <button onClick={() => changeYear(-1)} className="modern-button text-sm py-1 px-3">◀ {currentYear - 1}</button>
           <h2 className="text-2xl font-bold text-white">{currentYear}</h2>
-          <button 
-            onClick={() => changeYear(1)} 
-            className="modern-button text-sm py-1 px-3"
-          >
-            {currentYear + 1} ▶
-          </button>
+          <button onClick={() => changeYear(1)} className="modern-button text-sm py-1 px-3">{currentYear + 1} ▶</button>
         </div>
         
         {loading ? (
@@ -242,40 +252,21 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {meses.map((mes, idx) => (
               <div key={idx} className="bg-slate-800/50 rounded-xl p-3 border border-slate-600/30">
-                <h4 className="text-center text-white font-semibold mb-2 pb-1 border-b border-slate-600/30 text-sm">
-                  {mes}
-                </h4>
+                <h4 className="text-center text-white font-semibold mb-2 pb-1 border-b border-slate-600/30 text-sm">{mes}</h4>
                 <div className="grid grid-cols-7 gap-0.5 mb-1 text-center">
-                  {diasSemana.map(day => (
-                    <div key={day} className="text-slate-400 text-[10px] font-semibold">{day}</div>
-                  ))}
+                  {diasSemana.map(day => <div key={day} className="text-slate-400 text-[10px] font-semibold">{day}</div>)}
                 </div>
-                <div className="grid grid-cols-7 gap-0.5">
-                  {renderMonth(idx)}
-                </div>
+                <div className="grid grid-cols-7 gap-0.5">{renderMonth(idx)}</div>
               </div>
             ))}
           </div>
         )}
         
-        {/* Leyenda */}
         <div className="mt-6 pt-4 border-t border-slate-600/30 flex justify-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30"></div>
-            <span className="text-slate-300 text-xs">Disponible</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded-full bg-yellow-500/40 border border-yellow-400"></div>
-            <span className="text-slate-300 text-xs">Pendiente</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded-full bg-red-500/50 border border-red-400"></div>
-            <span className="text-slate-300 text-xs">Ocupado</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded-full bg-slate-600/40 border border-slate-500/30"></div>
-            <span className="text-slate-300 text-xs">No laborable</span>
-          </div>
+          <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30"></div><span className="text-slate-300 text-xs">Disponible</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full bg-yellow-500/40 border border-yellow-400"></div><span className="text-slate-300 text-xs">Pendiente</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full bg-red-500/50 border border-red-400"></div><span className="text-slate-300 text-xs">Ocupado</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full bg-slate-600/40 border border-slate-500/30"></div><span className="text-slate-300 text-xs">No laborable</span></div>
         </div>
         
         <div className="flex justify-end mt-6">

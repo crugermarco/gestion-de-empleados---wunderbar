@@ -46,26 +46,20 @@ export async function generateVacationPDFDirect(vacationData) {
     
     // Intentar cargar los logos
     try {
-      // Logo izquierdo (IVEMSA)
       const leftLogoUrl = '/logos/ivemsa.png'
       const leftLogoBase64 = await loadImageAsBase64(leftLogoUrl)
       doc.addImage(leftLogoBase64, 'PNG', margin, logoTopMargin, logoWidth, logoHeight)
     } catch (error) {
-      console.warn('Logo izquierdo no cargado:', error.message)
-      // Opcional: texto alternativo
       doc.setFontSize(8)
       doc.setTextColor(100, 100, 100)
       doc.text('IVEMSA', margin + 10, logoTopMargin + 10)
     }
     
     try {
-      // Logo derecho (Wunderbar)
       const rightLogoUrl = '/logos/wunderbar.png'
       const rightLogoBase64 = await loadImageAsBase64(rightLogoUrl)
       doc.addImage(rightLogoBase64, 'PNG', pageWidth - margin - logoWidth, logoTopMargin, logoWidth, logoHeight)
     } catch (error) {
-      console.warn('Logo derecho no cargado:', error.message)
-      // Opcional: texto alternativo
       doc.setFontSize(8)
       doc.setTextColor(100, 100, 100)
       doc.text('Wunderbar', pageWidth - margin - 20, logoTopMargin + 10)
@@ -103,46 +97,46 @@ export async function generateVacationPDFDirect(vacationData) {
     doc.setFont('helvetica', 'bold')
     doc.text('Nombre:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.nombre || '', margin + 25, yPos)
+    doc.text(String(vacationData.nombre || ''), margin + 25, yPos)
     
     doc.setFont('helvetica', 'bold')
     doc.text('Numero de Empleado:', pageWidth / 2 + 10, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.numeroEmpleado || '', pageWidth / 2 + 55, yPos)
+    doc.text(String(vacationData.numeroEmpleado || ''), pageWidth / 2 + 55, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de ingreso:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaIngreso || '', margin + 42, yPos)
+    doc.text(String(vacationData.fechaIngreso || ''), margin + 42, yPos)
     
     doc.setFont('helvetica', 'bold')
     doc.text('Dias a gozar:', margin + 85, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.diasTomados || '0', margin + 115, yPos)
+    doc.text(String(vacationData.diasTomados || '0'), margin + 115, yPos)
     
     doc.setFont('helvetica', 'bold')
     doc.text('Dias a pagar:', margin + 135, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.diasTomados || '0', margin + 165, yPos)
+    doc.text(String(vacationData.diasTomados || '0'), margin + 165, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de pago de vacaciones:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaPago || '', margin + 75, yPos)
+    doc.text(String(vacationData.fechaPago || ''), margin + 75, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de Inicio de Vacaciones:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaSalida || '', margin + 78, yPos)
+    doc.text(String(vacationData.fechaSalida || ''), margin + 78, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
     doc.text('Fecha de que debera presentarse a trabajar:', margin, yPos)
     doc.setFont('helvetica', 'normal')
-    doc.text(vacationData.fechaRegreso || '', margin + 105, yPos)
+    doc.text(String(vacationData.fechaRegreso || ''), margin + 105, yPos)
     
     yPos += 10
     doc.setFont('helvetica', 'bold')
@@ -158,7 +152,7 @@ export async function generateVacationPDFDirect(vacationData) {
     if (vacationData.comentarios) {
       yPos += 7
       doc.setFontSize(10)
-      const comentariosLines = doc.splitTextToSize(vacationData.comentarios, pageWidth - (margin * 2))
+      const comentariosLines = doc.splitTextToSize(String(vacationData.comentarios), pageWidth - (margin * 2))
       doc.text(comentariosLines, margin, yPos)
       yPos += (comentariosLines.length * 5)
     }

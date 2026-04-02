@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { googleSheetsService } from '../../services/googleSheetsService'
+import { vacationsSupabaseService } from '../../services/vacationsSupabaseService'
 import { formatDate, formatDateForSheet, isNonWorkingDay } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
+import { googleSheetsService } from '../../services/googleSheetsService'
 
 export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -334,7 +335,7 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
     }
     
     setLoading(true)
-    const result = await googleSheetsService.addVacation(vacationRecord)
+    const result = await vacationsSupabaseService.add(vacationRecord)
     if (!result.error) {
       showNotification('Vacaciones guardadas exitosamente', 'success')
       onSuccess(); onClose()

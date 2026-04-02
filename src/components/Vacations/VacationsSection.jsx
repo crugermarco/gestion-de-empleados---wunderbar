@@ -6,6 +6,7 @@ import { VacationScheduleModal } from './VacationScheduleModal'
 import { generateVacationPDFDirect } from '../../utils/pdfGenerator'
 import { useAuth } from '../../contexts/AuthContext'
 import { VacationCalendar } from './VacationCalendar'
+import { vacationsSupabaseService } from '../../services/vacationsSupabaseService'
 
 export const VacationsSection = () => {
   const { canEdit } = useAuth()
@@ -22,7 +23,7 @@ export const VacationsSection = () => {
 
   const loadVacationData = async () => {
     setLoading(true)
-    const result = await googleSheetsService.getVacations()
+    const result = await vacationsSupabaseService.getAll()
     if (!result.error && result.data) {
       setVacationData(result.data)
       setFilteredData(result.data)
@@ -88,39 +89,39 @@ export const VacationsSection = () => {
     showNotification('Datos exportados exitosamente', 'success')
   }
 
-  const handleToggleAuthorization = async (index, isAuthorized) => {
-    const record = vacationData[index]
-    const updateData = {
-      action: 'update',
-      original: { 
-        NOMBRE: record.NOMBRE, 
-        'NUMERO DE EMPLEADO': record['NUMERO DE EMPLEADO'], 
-        'FECHA SALIDA': record['FECHA SALIDA'] 
-      },
-      updated: { 'AUTORIZADAS': isAuthorized ? 'TRUE' : 'FALSE' }
-    }
-    const result = await googleSheetsService.updateVacation(updateData.original, updateData.updated)
+  const handleToggleAuthorization = async (id, isAuthorized) => {
+    console.log('Toggle - ID:', id, 'isAuthorized:', isAuthorized)
+    
+    const result = await vacationsSupabaseService.updateAuthorization(id, isAuthorized)
+    console.log('Resultado update:', result)
+    
     if (!result.error) {
-      vacationData[index]['AUTORIZADAS'] = isAuthorized
-      setVacationData([...vacationData])
-      applyFilters()
+      // Actualizar el estado local inmediatamente
+      setVacationData(prevData => 
+        prevData.map(item => 
+          item.id === id ? { ...item, AUTORIZADAS: isAuthorized } : item
+        )
+      )
+      setFilteredData(prevData => 
+        prevData.map(item => 
+          item.id === id ? { ...item, AUTORIZADAS: isAuthorized } : item
+        )
+      )
       showNotification(`Vacación ${isAuthorized ? 'autorizada' : 'desautorizada'} exitosamente`, 'success')
+    } else {
+      showNotification(`Error: ${result.error}`, 'error')
     }
   }
 
-  const handleDelete = async (index) => {
-    const record = vacationData[index]
-    if (confirm(`¿Estás seguro de eliminar las vacaciones de ${record.NOMBRE} (${record['FECHA SALIDA']} - ${record['FECHA REGRESO']})?`)) {
-      const result = await googleSheetsService.deleteVacation({ 
-        NOMBRE: record.NOMBRE, 
-        'FECHA SALIDA': record['FECHA SALIDA'], 
-        'NUMERO DE EMPLEADO': record['NUMERO DE EMPLEADO'] 
-      })
+  const handleDelete = async (id, nombre, fechaSalida, fechaRegreso) => {
+    if (confirm(`¿Estás seguro de eliminar las vacaciones de ${nombre} (${fechaSalida} - ${fechaRegreso})?`)) {
+      const result = await vacationsSupabaseService.delete(id)
       if (!result.error) {
-        vacationData.splice(index, 1)
-        setVacationData([...vacationData])
-        applyFilters()
-        showNotification('Registro de vacaciones eliminado exitosamente', 'success')
+        setVacationData(prev => prev.filter(item => item.id !== id))
+        setFilteredData(prev => prev.filter(item => item.id !== id))
+        showNotification('Registro eliminado exitosamente', 'success')
+      } else {
+        showNotification('Error al eliminar', 'error')
       }
     }
   }
@@ -149,14 +150,14 @@ export const VacationsSection = () => {
       return dateValue
     }
     
-    const nombre = record.NOMBRE || ''
-    const numeroEmpleado = record['NUMERO DE EMPLEADO'] || ''
-    const fechaIngreso = formatDateForPDF(record['FECHA DE INGRESO'])
-    const fechaPago = formatDateForPDF(record['FECHA DE PAGO'])
-    const fechaSalida = formatDateForPDF(record['FECHA SALIDA'])
-    const fechaRegreso = formatDateForPDF(record['FECHA REGRESO'])
-    const diasTomados = record['DÍAS TOMADOS'] || '0'
-    const diasVacaciones = record['DÍAS VACACIONES'] || '0'
+    const nombre = record.nombre || record.NOMBRE || ''
+    const numeroEmpleado = record.numero_empleado || record['NUMERO DE EMPLEADO'] || ''
+    const fechaIngreso = formatDateForPDF(record.fecha_ingreso || record['FECHA DE INGRESO'])
+    const fechaPago = record.fecha_pago || record['FECHA DE PAGO'] || ''
+    const fechaSalida = formatDateForPDF(record.fecha_salida || record['FECHA SALIDA'])
+    const fechaRegreso = formatDateForPDF(record.fecha_regreso || record['FECHA REGRESO'])
+    const diasTomados = String(record.dias_tomados || record['DÍAS TOMADOS'] || '0')
+    const diasVacaciones = String(record.dias_vacaciones || record['DÍAS VACACIONES'] || '0')
     
     if (!nombre) {
       showNotification('Error: No se pudo obtener el nombre del empleado', 'error')
@@ -326,7 +327,7 @@ export const VacationsSection = () => {
                             type="checkbox" 
                             className="hidden" 
                             checked={autorizadas} 
-                            onChange={(e) => handleToggleAuthorization(vacationData.indexOf(item), e.target.checked)} 
+                            onChange={(e) => handleToggleAuthorization(item.id, e.target.checked)} 
                             disabled={!canEdit()} 
                           />
                           <span className={`relative w-11 h-6 rounded-full transition-all duration-300 ${autorizadas ? 'bg-emerald-500' : 'bg-slate-600'} before:content-[""] before:absolute before:w-5 before:h-5 before:bg-white before:rounded-full before:transition-all before:duration-300 ${autorizadas ? 'before:translate-x-5' : 'before:translate-x-0.5'} before:top-0.5`}></span>
@@ -349,7 +350,7 @@ export const VacationsSection = () => {
                           {/* Botón Eliminar - SOLO para Marco Cruger */}
                           {canEdit() && (
                             <button 
-                              onClick={() => handleDelete(vacationData.indexOf(item))} 
+                            onClick={() => handleDelete(item.id, item.nombre, item.fecha_salida, item.fecha_regreso)}
                               className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded flex items-center gap-1"
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
