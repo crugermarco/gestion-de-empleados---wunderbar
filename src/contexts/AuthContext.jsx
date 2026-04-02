@@ -15,22 +15,48 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const userParam = urlParams.get('user')
+    
+    if (userParam) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userParam))
+        localStorage.setItem('userSession', JSON.stringify(user))
+        setCurrentUser({
+          name: user.USUARIO || 'Usuario',
+          role: user.ROL || 'user'
+        })
+        window.history.replaceState({}, document.title, window.location.pathname)
+        setLoading(false)
+        return
+      } catch (error) {
+        console.error('Error al parsear usuario de URL:', error)
+      }
+    }
+    
     const userSession = localStorage.getItem('userSession')
     
     if (userSession) {
-      const user = JSON.parse(userSession)
-      console.log('🔐 Usuario cargado desde localStorage:', user.USUARIO)
-      setCurrentUser({
-        name: user.USUARIO || 'Usuario',
-        role: user.ROL || 'user'
-      })
+      try {
+        const user = JSON.parse(userSession)
+        setCurrentUser({
+          name: user.USUARIO || 'Usuario',
+          role: user.ROL || 'user'
+        })
+      } catch (error) {
+        console.error('Error al parsear usuario de localStorage:', error)
+        setCurrentUser({
+          name: 'Usuario Demo',
+          role: 'user'
+        })
+      }
     } else {
-      console.log(' No hay sesión, usando usuario demo')
       setCurrentUser({
         name: 'Usuario Demo',
         role: 'user'
       })
     }
+    
     setLoading(false)
   }, [])
 
