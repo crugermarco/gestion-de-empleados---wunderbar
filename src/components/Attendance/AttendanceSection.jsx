@@ -1,15 +1,22 @@
+'use client'
+
 import React, { useState, useEffect } from 'react'
-import { googleSheetsService } from '../../services/googleSheetsService'
+import { useAuth } from '../../contexts/AuthContext'
+import { attendanceSupabaseService } from '../../services/attendanceSupabaseService'
 import { formatDate, getMonthNumber, isMondayOrFriday } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 import { AttendanceModal } from './AttendanceModal'
 import { MissingEmployeesTable } from './MissingEmployeesTable'
+import { AttendanceEditModal } from './AttendanceEditModal'
 
 export const AttendanceSection = () => {
+  const { canEdit } = useAuth()
   const [attendanceData, setAttendanceData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingAttendance, setEditingAttendance] = useState(null)
   const [filters, setFilters] = useState({ date: '', name: '', subject: '', points: '' })
 
   useEffect(() => {
@@ -18,8 +25,7 @@ export const AttendanceSection = () => {
 
   const loadAttendanceData = async () => {
     setLoading(true)
-    const result = await googleSheetsService.getAttendance()
-    
+    const result = await attendanceSupabaseService.getAll()
     if (!result.error && result.data) {
       setAttendanceData(result.data)
       setFilteredData(result.data)
@@ -110,10 +116,37 @@ export const AttendanceSection = () => {
     showNotification('Datos exportados exitosamente', 'success')
   }
 
+  const handleDelete = async (id, nombre, fecha) => {
+    if (confirm(`¿Estás seguro de eliminar el registro de ${nombre} del ${fecha}?`)) {
+      const result = await attendanceSupabaseService.delete(id)
+      if (!result.error) {
+        // Recargar todos los datos para asegurar consistencia
+        await loadAttendanceData()
+        showNotification('Registro eliminado exitosamente', 'success')
+      } else {
+        showNotification('Error al eliminar', 'error')
+      }
+    }
+  }
+  
+  const handleUpdate = async (id, updatedData) => {
+    const result = await attendanceSupabaseService.update(id, updatedData)
+    if (!result.error) {
+      // Recargar todos los datos para asegurar consistencia
+      await loadAttendanceData()
+      showNotification('Registro actualizado exitosamente', 'success')
+      setIsEditModalOpen(false)
+      setEditingAttendance(null)
+    } else {
+      showNotification('Error al actualizar', 'error')
+    }
+  }
+
   const hasActiveFilters = Object.values(filters).some(v => v)
   let displayData = filteredData
-  if (!hasActiveFilters && filteredData.length > 20) {
-    displayData = filteredData.slice(-20)
+  
+  if (!hasActiveFilters && filteredData.length > 25) {
+    displayData = filteredData.slice(0, 25)
   }
 
   return (
@@ -152,16 +185,17 @@ export const AttendanceSection = () => {
                 <th className="p-4 text-left text-slate-300 text-sm uppercase">Nombre</th>
                 <th className="p-4 text-left text-slate-300 text-sm uppercase">Asunto</th>
                 <th className="p-4 text-left text-slate-300 text-sm uppercase">Puntos</th>
+                <th className="p-4 text-left text-slate-300 text-sm uppercase">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center text-slate-400">Cargando datos...</td>
+                  <td colSpan="5" className="p-8 text-center text-slate-400">Cargando datos...</td>
                 </tr>
               ) : displayData.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center text-slate-400">No hay datos disponibles</td>
+                  <td colSpan="5" className="p-8 text-center text-slate-400">No hay datos disponibles</td>
                 </tr>
               ) : (
                 displayData.map((item, idx) => {
@@ -178,6 +212,24 @@ export const AttendanceSection = () => {
                         <span className="status-badge">{item.MOTIVO || ''}</span>
                       </td>
                       <td className="p-4">{item.PUNTOS || '0'}</td>
+                      <td className="p-4">
+                        {canEdit() && (
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => { setEditingAttendance(item); setIsEditModalOpen(true) }} 
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded"
+                            >
+                              Editar
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(item.id, item.NOMBRE, item.FECHA)} 
+                              className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   )
                 })
@@ -188,7 +240,19 @@ export const AttendanceSection = () => {
       </div>
 
       <MissingEmployeesTable attendanceData={attendanceData} />
-      <AttendanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={loadAttendanceData} />
+      
+      <AttendanceModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSuccess={loadAttendanceData} 
+      />
+      
+      <AttendanceEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setEditingAttendance(null) }}
+        attendance={editingAttendance}
+        onUpdate={handleUpdate}
+      />
     </div>
   )
 }

@@ -1,4 +1,7 @@
+'use client'
+
 import React, { useState, useEffect } from 'react'
+import { attendanceSupabaseService } from '../../services/attendanceSupabaseService'
 import { googleSheetsService } from '../../services/googleSheetsService'
 import { showNotification } from '../UI/NotificationContainer'
 
@@ -55,11 +58,10 @@ export const AttendanceModal = ({ isOpen, onClose, onSuccess }) => {
       FECHA: formData.fecha,
       NOMBRE: formData.nombre,
       MOTIVO: formData.tipo,
-      NOTAS: '',
       PUNTOS: getPoints(formData.tipo)
     }
     
-    const result = await googleSheetsService.addAttendance(record)
+    const result = await attendanceSupabaseService.add(record)
     
     if (!result.error) {
       showNotification('Registro exitoso', 'success')
@@ -86,7 +88,7 @@ export const AttendanceModal = ({ isOpen, onClose, onSuccess }) => {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="form-label">Fecha</label>
-            <input type="text" className="form-input" value={formData.fecha} onChange={(e) => setFormData(prev => ({ ...prev, fecha: e.target.value }))} placeholder="dd/mm/aaaa" required />
+            <input type="text" className="form-input" value={formData.fecha} onChange={(e) => setFormData(prev => ({ ...prev, fecha: e.target.value }))} placeholder="mm/dd/aaaa" required />
           </div>
           
           <div className="mb-4">
