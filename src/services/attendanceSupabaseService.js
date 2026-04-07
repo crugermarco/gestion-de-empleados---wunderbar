@@ -5,14 +5,14 @@ export const attendanceSupabaseService = {
     const { data, error } = await supabase
       .from('asistencias')
       .select('*')
-      .order('id', { ascending: false })
+      .order('id', { ascending: false })  // Los IDs más altos (fechas más recientes) primero
     
     if (error) throw error
-    return { data, error: null }
+    
+    return { data, error: null }  // Ya no necesitas ordenar manualmente
   },
 
   async add(attendanceRecord) {
-    // Truncar campos para evitar errores de tamaño
     const cleanedRecord = {
       FECHA: (attendanceRecord.FECHA || '').substring(0, 20),
       NOMBRE: (attendanceRecord.NOMBRE || '').substring(0, 200),
@@ -30,7 +30,6 @@ export const attendanceSupabaseService = {
   },
 
   async update(id, updates) {
-    // Truncar campos para evitar errores de tamaño
     const cleanedUpdates = {
       FECHA: (updates.FECHA || '').substring(0, 20),
       NOMBRE: (updates.NOMBRE || '').substring(0, 200),

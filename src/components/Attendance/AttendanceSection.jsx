@@ -27,6 +27,8 @@ export const AttendanceSection = () => {
     setLoading(true)
     const result = await attendanceSupabaseService.getAll()
     if (!result.error && result.data) {
+      console.log(' Primeras 5 fechas (más recientes):', result.data.slice(0, 5).map(item => item.FECHA))
+      console.log(' Últimas 5 fechas (más antiguas):', result.data.slice(-5).map(item => item.FECHA))
       setAttendanceData(result.data)
       setFilteredData(result.data)
     } else {
@@ -146,7 +148,7 @@ export const AttendanceSection = () => {
   let displayData = filteredData
   
   if (!hasActiveFilters && filteredData.length > 25) {
-    displayData = filteredData.slice(0, 25)
+    displayData = filteredData.slice(0, 25)  
   }
 
   return (

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { attendanceSupabaseService } from '../../services/attendanceSupabaseService'
 import { showNotification } from '../UI/NotificationContainer'
 
 export const AttendanceEditModal = ({ isOpen, onClose, attendance, onUpdate }) => {
@@ -30,38 +31,25 @@ export const AttendanceEditModal = ({ isOpen, onClose, attendance, onUpdate }) =
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!formData.fecha || !formData.nombre || !formData.tipo) {
+    if (!formData.FECHA || !formData.NOMBRE || !formData.MOTIVO) {
       showNotification('Por favor, complete todos los campos', 'error')
       return
     }
-  
+
     setLoading(true)
     
     // Truncar campos para evitar errores de tamaño
-    const fechaLimpia = formData.fecha.substring(0, 20)
-    const nombreLimpio = formData.nombre.substring(0, 200)
-    const motivoLimpio = formData.tipo.substring(0, 100)
-    const puntosLimpios = getPoints(formData.tipo).substring(0, 20)
-    
-    const record = {
-      FECHA: fechaLimpia,
-      NOMBRE: nombreLimpio,
-      MOTIVO: motivoLimpio,
-      PUNTOS: puntosLimpios
+    const cleanedData = {
+      FECHA: formData.FECHA.substring(0, 20),
+      NOMBRE: formData.NOMBRE.substring(0, 200),
+      MOTIVO: formData.MOTIVO.substring(0, 100),
+      PUNTOS: formData.PUNTOS.substring(0, 20)
     }
     
-    console.log('📝 Registro a guardar:', record)
+    console.log('📝 Actualizando registro:', { id: attendance.id, ...cleanedData })
     
-    const result = await attendanceSupabaseService.add(record)
-    
-    if (!result.error) {
-      showNotification('Registro exitoso', 'success')
-      onSuccess()
-      onClose()
-      setFormData({ fecha: '', nombre: '', tipo: '' })
-    } else {
-      showNotification(`Error: ${result.error.message}`, 'error')
-    }
+    // Usar onUpdate que viene del padre (que llama a update)
+    await onUpdate(attendance.id, cleanedData)
     
     setLoading(false)
   }
