@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { googleSheetsService } from '../../services/googleSheetsService'
+import { suspensionSupabaseService } from '../../services/suspensionSupabaseService'
 import { formatDate, formatDateForSheet, isValidSuspensionDay } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 
@@ -11,7 +12,7 @@ export const SuspensionModal = ({ isOpen, onClose, candidate, onSuccess }) => {
 
   useEffect(() => {
     if (isOpen && candidate) {
-      createDateInputs(candidate.suggestedDays)
+      createDateInputs(candidate.suggesteddays || 1)
     }
   }, [isOpen, candidate])
 
@@ -35,17 +36,17 @@ export const SuspensionModal = ({ isOpen, onClose, candidate, onSuccess }) => {
     setSuspensionDates(newDates)
   }
 
-  const generateSuspensionPDF = async (candidate, dates) => {
+  const generateSuspensionPDF = async (candidate, dates, faltaFecha) => {
     try {
       const formattedDates = dates.map(d => formatDateForSheet(d)).join('-')
       const today = new Date()
       const todayFormatted = formatDateForSheet(today)
       
       const suspensionData = {
-        'Nombre': candidate.employeeName,
+        'Nombre': candidate.employeename,
         'NumeroEmpleado': '',
         'FechadeHoy': todayFormatted,
-        'Descripciondelasfaltas': `falto injustificadamente el dia ${formatDateForSheet(candidate.firstAbsenceDate)}`,
+        'Descripciondelasfaltas': `falto injustificadamente el dia ${formatDateForSheet(faltaFecha)}`,
         'FechaSuspencion': formattedDates
       }
       
@@ -65,41 +66,6 @@ export const SuspensionModal = ({ isOpen, onClose, candidate, onSuccess }) => {
     } catch (error) {
       showNotification('Error al generar PDF: ' + error.message, 'error')
       return false
-    }
-  }
-
-  const updateSuspensionConcentrado = async (candidate, suspensionDates) => {
-    try {
-      const applicationDate = formatDateForSheet(new Date())
-      let updatedCount = 0
-      
-      for (const absence of candidate.absencesData) {
-        const absenceDateFormatted = formatDateForSheet(absence.FECHA)
-        
-        const updateData = {
-          'FECHA': absenceDateFormatted,
-          'NOMBRE': candidate.employeeName,
-          'MOTIVO': absence.MOTIVO || 'Falta injustificada',
-          'STATUS': 'REALIZADA',
-          'FECHA DE APLICACION': applicationDate
-        }
-        
-        const updateResult = await googleSheetsService.updateSuspension(updateData)
-        
-        if (updateResult.updated) {
-          updatedCount++
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 500))
-      }
-      
-      if (updatedCount === 0) {
-        throw new Error('No se pudo actualizar ningún registro en el concentrado')
-      }
-      
-      return { success: true, updatedCount }
-    } catch (error) {
-      throw error
     }
   }
 
@@ -126,15 +92,47 @@ export const SuspensionModal = ({ isOpen, onClose, candidate, onSuccess }) => {
     setLoading(true)
     
     try {
-      // Generar PDF
-      const pdfGenerated = await generateSuspensionPDF(candidate, dates)
+      const faltaFecha = candidate.firstabsencedate
+      const faltaMotivo = 'Falta injustificada'
+      
+      // Convertir las fechas seleccionadas de YYYY-MM-DD a MM/DD/YYYY
+      const fechasConvertidas = dates.map(date => {
+        const [year, month, day] = date.split('-')
+        return `${month}/${day}/${year}`
+      })
+      
+      // La primera fecha también en formato MM/DD/YYYY
+      const primeraFechaConvertida = fechasConvertidas[0]
+      const fechasSuspensionStr = fechasConvertidas.join(',')
+      
+      console.log('Fechas originales (YYYY-MM-DD):', dates)
+      console.log('Fechas convertidas (MM/DD/YYYY):', fechasConvertidas)
+      
+      const tipoSuspension = candidate.es_lunes_viernes ? 'AUTOMATICA' : 'ACUMULACION'
+      
+      // Generar PDF con las fechas en formato original
+      const pdfGenerated = await generateSuspensionPDF(candidate, dates, faltaFecha)
       
       if (!pdfGenerated) {
         throw new Error('Error al generar PDF')
       }
       
-      // Actualizar concentrado de suspensiones
-      await updateSuspensionConcentrado(candidate, dates)
+      // Registrar en Supabase
+      const result = await suspensionSupabaseService.aplicarSuspension(
+        candidate.employeename,
+        faltaFecha,
+        faltaMotivo,
+        fechasSuspensionStr,
+        candidate.suggesteddays,
+        tipoSuspension,
+        1,
+        candidate.mondayfridaycount || 0,
+        primeraFechaConvertida
+      )
+      
+      if (result.error) {
+        throw new Error('Error al registrar la suspensión')
+      }
       
       showNotification('Suspensión aplicada exitosamente', 'success')
       onSuccess()
@@ -160,18 +158,26 @@ export const SuspensionModal = ({ isOpen, onClose, candidate, onSuccess }) => {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="form-label">Nombre del Empleado</label>
-            <input type="text" className="form-input" value={candidate.employeeName} readOnly />
+            <input type="text" className="form-input" value={candidate.employeename || ''} readOnly />
+          </div>
+          
+          <div className="mb-4">
+            <label className="form-label">Fecha de la Falta</label>
+            <input type="text" className="form-input" value={candidate.firstabsencedate || ''} readOnly />
           </div>
           
           <div className="mb-4">
             <label className="form-label">Días de Suspensión Sugeridos</label>
-            <input type="text" className="form-input" value={candidate.suggestedDays} readOnly />
+            <input type="text" className="form-input" value={candidate.suggesteddays || 1} readOnly />
           </div>
           
           <div className="mb-4">
             <h4 className="text-slate-300 font-semibold mb-4">
-              Fechas de Aplicación de Suspensión ({candidate.suggestedDays} día(s)) - Lunes a Viernes
+              Fechas de Suspensión ({candidate.suggesteddays || 1} día(s)) - Lunes a Viernes
             </h4>
+            <p className="text-slate-400 text-sm mb-3">
+              Estas fechas serán registradas en el sistema como días de suspensión
+            </p>
             {suspensionDates.map((date, idx) => (
               <div key={idx} className="flex items-center gap-2 mb-2">
                 <label className="text-slate-300 font-semibold min-w-[60px]">Día {idx + 1}:</label>
@@ -192,7 +198,7 @@ export const SuspensionModal = ({ isOpen, onClose, candidate, onSuccess }) => {
             <textarea
               className="form-input"
               rows="3"
-              value={`falto injustificadamente el dia ${formatDate(candidate.firstAbsenceDate)}`}
+              value={`falto injustificadamente el dia ${formatDate(candidate.firstabsencedate)}`}
               readOnly
             />
           </div>
@@ -200,7 +206,7 @@ export const SuspensionModal = ({ isOpen, onClose, candidate, onSuccess }) => {
           <div className="flex justify-end gap-4 mt-6 sticky bottom-0 bg-slate-900/95 py-2">
             <button type="button" onClick={onClose} className="cancel-button">Cancelar</button>
             <button type="submit" disabled={loading} className="modern-button">
-              {loading ? 'Procesando...' : 'Generar PDF de Suspensión'}
+              {loading ? 'Procesando...' : 'Aplicar Suspensión'}
             </button>
           </div>
         </form>

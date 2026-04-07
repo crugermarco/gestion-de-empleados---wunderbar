@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { googleSheetsService } from '../../services/googleSheetsService'
-import { updateSuspensionStatuses } from '../../utils/suspensionCalculations'
+import { suspensionSupabaseService } from '../../services/suspensionSupabaseService'
 import { formatDate } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 import { SuspensionModal } from './SuspensionModal'
@@ -12,7 +12,6 @@ import { useAuth } from '../../contexts/AuthContext'
 
 export const SuspensionsSection = () => {
   const { isAuthorizedUser } = useAuth()
-  const [suspensionData, setSuspensionData] = useState([])
   const [suspensionCandidates, setSuspensionCandidates] = useState([])
   const [notAppliedSuspensions, setNotAppliedSuspensions] = useState([])
   const [appliedSuspensions, setAppliedSuspensions] = useState([])
@@ -23,7 +22,6 @@ export const SuspensionsSection = () => {
 
   useEffect(() => {
     loadSuspensionData()
-    // Configurar verificación periódica de suspensiones (cada 30 minutos)
     const interval = setInterval(() => {
       loadSuspensionData()
     }, 30 * 60 * 1000)
@@ -33,23 +31,37 @@ export const SuspensionsSection = () => {
 
   const loadSuspensionData = async () => {
     setLoading(true)
-    const result = await googleSheetsService.getSuspensions()
-    if (!result.error && result.data) {
-      setSuspensionData(result.data)
-      const statuses = updateSuspensionStatuses(result.data)
-      setSuspensionCandidates(statuses.suspensionCandidates)
-      setNotAppliedSuspensions(statuses.notAppliedSuspensions)
-      setAppliedSuspensions(statuses.appliedSuspensions)
-      setDismissalCandidates(statuses.automaticDismissalCandidates)
+    
+    try {
+      // Obtener candidatos a suspensión desde Supabase
+      const candidatosResult = await suspensionSupabaseService.obtenerCandidatos()
+      if (!candidatosResult.error) {
+        setSuspensionCandidates(candidatosResult.data || [])
+      }
       
-      // Mostrar notificaciones si hay candidatos
-      if (statuses.suspensionCandidates.length > 0) {
-        showNotification(`Hay ${statuses.suspensionCandidates.length} candidato(s) a suspensión pendientes`, 'warning')
+      // Obtener candidatos a baja desde Supabase
+      const bajasResult = await suspensionSupabaseService.obtenerCandidatosBaja()
+      if (!bajasResult.error) {
+        setDismissalCandidates(bajasResult.data || [])
       }
-      if (statuses.automaticDismissalCandidates.length > 0) {
-        showNotification(`CANDIDATO A BAJA AUTOMÁTICA: ${statuses.automaticDismissalCandidates.length} empleado(s) con 4+ faltas en 30 días`, 'error')
+      
+      // Obtener suspensiones no aplicadas desde Supabase
+      const noAplicadasResult = await suspensionSupabaseService.obtenerNoAplicadas()
+      if (!noAplicadasResult.error) {
+        setNotAppliedSuspensions(noAplicadasResult.data || [])
       }
+      
+      // Obtener suspensiones aplicadas desde Supabase
+      const aplicadasResult = await suspensionSupabaseService.obtenerAplicadas()
+      if (!aplicadasResult.error) {
+        setAppliedSuspensions(aplicadasResult.data || [])
+      }
+      
+    } catch (error) {
+      console.error('Error loading suspension data:', error)
+      showNotification('Error al cargar datos de suspensiones', 'error')
     }
+    
     setLoading(false)
   }
 
@@ -63,12 +75,17 @@ export const SuspensionsSection = () => {
     setIsModalOpen(true)
   }
 
-  // Verificar si el usuario está autorizado para aplicar suspensiones
-
+  // Calcular días restantes para vencimiento
+  const getDaysRemaining = (deadline) => {
+    if (!deadline) return 0
+    const hoy = new Date()
+    const deadlineDate = new Date(deadline)
+    const diff = Math.ceil((deadlineDate - hoy) / (1000 * 60 * 60 * 24))
+    return diff > 0 ? diff : 0
+  }
 
   return (
     <div>
-      {/* Botón de actualizar */}
       <div className="flex justify-end mb-4">
         <button onClick={handleRefresh} className="modern-button">
           <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,34 +98,49 @@ export const SuspensionsSection = () => {
       {/* Suspensiones Pendientes */}
       <div className="glassmorphism-table mb-8">
         <div className="flex justify-between items-center p-6 border-b border-slate-600/30">
-          <h3 className="text-xl font-bold text-white">Suspensiones Pendientes</h3>
+          <h3 className="text-xl font-bold text-white">
+            Suspensiones Pendientes
+            <span className="bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-lg text-sm ml-2">{suspensionCandidates.length}</span>
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead className="bg-slate-800/90">
               <tr>
                 <th className="p-4 text-left text-slate-300 text-sm uppercase">Nombre</th>
-                <th className="p-4 text-left text-slate-300 text-sm uppercase">Primera Falta</th>
-                <th className="p-4 text-left text-slate-300 text-sm uppercase">Faltas</th>
+                <th className="p-4 text-left text-slate-300 text-sm uppercase">Fecha Falta</th>
+                <th className="p-4 text-left text-slate-300 text-sm uppercase">Lunes/Viernes</th>
                 <th className="p-4 text-left text-slate-300 text-sm uppercase">Días Sugeridos</th>
+                <th className="p-4 text-left text-slate-300 text-sm uppercase">Vencimiento</th>
                 <th className="p-4 text-left text-slate-300 text-sm uppercase">Estado</th>
                 <th className="p-4 text-left text-slate-300 text-sm uppercase">Acciones</th>
-               </tr>
+              </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="6" className="p-8 text-center text-slate-400">Cargando datos...</td></tr>
+                <tr><td colSpan="7" className="p-8 text-center text-slate-400">Cargando datos...</td></tr>
               ) : suspensionCandidates.length === 0 ? (
-                <tr><td colSpan="6" className="p-8 text-center text-slate-400">No hay candidatos a suspensión pendientes</td></tr>
+                <tr><td colSpan="7" className="p-8 text-center text-slate-400">No hay candidatos a suspensión pendientes</td></tr>
               ) : (
                 suspensionCandidates.map((candidate, idx) => {
-                  const daysRemaining = Math.ceil((candidate.deadline - new Date()) / (1000 * 60 * 60 * 24))
+                  const daysRemaining = getDaysRemaining(candidate.deadline)
                   return (
-                    <tr key={idx} className="border-b border-slate-600/30 blinking-row-yellow">
-                      <td className="p-4">{candidate.employeeName}</td>
-                      <td className="p-4">{formatDate(candidate.firstAbsenceDate)}</td>
-                      <td className="p-4">{candidate.absencesCount} falta(s) ({candidate.mondayFridayCount} en lunes/viernes)</td>
-                      <td className="p-4">{candidate.suggestedDays} día(s)</td>
+                    <tr key={idx} className={`border-b border-slate-600/30 ${daysRemaining <= 3 ? 'blinking-row-red' : 'blinking-row-yellow'}`}>
+                      <td className="p-4 font-medium text-white">{candidate.employeename}</td>
+                      <td className="p-4">{formatDate(candidate.firstabsencedate)}</td>
+                      <td className="p-4">
+                        {candidate.mondayfridaycount > 0 ? (
+                          <span className="text-red-400 font-semibold">Sí</span>
+                        ) : (
+                          <span className="text-slate-400">No</span>
+                        )}
+                      </td>
+                      <td className="p-4">{candidate.suggesteddays} día(s)</td>
+                      <td className="p-4">
+                        <span className={daysRemaining <= 3 ? 'text-red-400 font-bold' : 'text-slate-400'}>
+                          {daysRemaining} días
+                        </span>
+                      </td>
                       <td className="p-4"><span className="status-badge status-pendiente">PENDIENTE</span></td>
                       <td className="p-4">
                         <button 
@@ -118,8 +150,6 @@ export const SuspensionsSection = () => {
                         >
                           Aplicar
                         </button>
-                        <br />
-                        <small className="text-slate-400">Vence en {daysRemaining} días</small>
                       </td>
                     </tr>
                   )
@@ -130,13 +160,16 @@ export const SuspensionsSection = () => {
         </div>
       </div>
 
-      {/* Suspensiones No Aplicadas */}
+      {/* Suspensiones No Aplicadas - Versión simplificada con contador */}
       {notAppliedSuspensions.length > 0 && (
         <div className="glassmorphism-table mb-8">
           <div className="p-6 border-b border-slate-600/30">
             <h3 className="text-lg font-semibold text-red-500 flex items-center gap-2">
               <span className="w-3 h-3 bg-red-500 rounded-full"></span>
               SUSPENSIONES NO APLICADAS
+              <span className="bg-red-500/20 text-red-500 px-2 py-1 rounded-lg text-sm ml-2">
+                {notAppliedSuspensions.reduce((sum, item) => sum + (item.cantidad_no_aplicadas || 1), 0)}
+              </span>
             </h3>
           </div>
           <div className="overflow-x-auto">
@@ -144,17 +177,15 @@ export const SuspensionsSection = () => {
               <thead className="bg-slate-800/90">
                 <tr>
                   <th className="p-4 text-left text-slate-300 text-sm uppercase">Nombre</th>
-                  <th className="p-4 text-left text-slate-300 text-sm uppercase">Primera Falta</th>
-                  <th className="p-4 text-left text-slate-300 text-sm uppercase">Fecha Límite</th>
+                  <th className="p-4 text-left text-slate-300 text-sm uppercase">Suspensiones Vencidas</th>
                   <th className="p-4 text-left text-slate-300 text-sm uppercase">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {notAppliedSuspensions.map((suspension, idx) => (
                   <tr key={idx} className="border-b border-slate-600/30 blinking-row-red">
-                    <td className="p-4">{suspension.employeeName}</td>
-                    <td className="p-4">{formatDate(suspension.firstAbsenceDate)}</td>
-                    <td className="p-4">{formatDate(suspension.deadline)}</td>
+                    <td className="p-4 font-medium text-white">{suspension.employeename}</td>
+                    <td className="p-4">{suspension.cantidad_no_aplicadas || 1} suspensión(es)</td>
                     <td className="p-4"><span className="status-badge status-no-aplicada">NO APLICADA</span></td>
                   </tr>
                 ))}
@@ -165,14 +196,21 @@ export const SuspensionsSection = () => {
       )}
 
       {/* Suspensiones Aplicadas */}
-      <AppliedSuspensionsTable appliedSuspensions={appliedSuspensions} />
+      <AppliedSuspensionsTable
+       appliedSuspensions={appliedSuspensions}
+       onRefresh={loadSuspensionData}
+       />
 
       {/* Candidatos a Baja Automática */}
       <DismissalCandidatesTable dismissalCandidates={dismissalCandidates} />
 
+      {/* Modal de Suspensión */}
       <SuspensionModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedCandidate(null)
+        }} 
         candidate={selectedCandidate} 
         onSuccess={loadSuspensionData} 
       />
