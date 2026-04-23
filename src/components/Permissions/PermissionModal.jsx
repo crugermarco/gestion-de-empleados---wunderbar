@@ -150,7 +150,8 @@ export const PermissionModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-      <div className="bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-600/50 p-6 max-w-[600px] w-full max-h-[85vh] overflow-y-auto">
+      <div className="shimmer-modal max-w-[500px] w-full max-h-[85vh]">
+      <div className="shimmer-modal-scroll">
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-slate-900/95 py-2">
           <h3 className="text-xl font-bold text-white">Solicitud de Permiso</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
@@ -285,6 +286,7 @@ export const PermissionModal = ({ isOpen, onClose }) => {
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   )

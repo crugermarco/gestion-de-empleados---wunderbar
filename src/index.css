@@ -116,3 +116,172 @@ body {
   color: #8b0000;
   border: 1px solid #8b0000;
 }
+
+/* Borde parpadeante para fechas de lunes/viernes */
+.blinking-red-border {
+  animation: blinkRedBorder 1s infinite;
+  border-left: 3px solid transparent;
+  padding-left: 12px;
+}
+
+@keyframes blinkRedBorder {
+  0%, 100% { border-left-color: transparent; }
+  50% { border-left-color: #ff4444; }
+}
+
+/* Parpadeo rojo intenso */
+.blinking-row-red {
+  animation: blinkRed 1s infinite;
+}
+
+.blinking-row-yellow {
+  animation: blinkYellow 1.5s infinite;
+}
+
+.blinking-row-green {
+  animation: blinkGreen 1.5s infinite;
+}
+
+@keyframes blinkRed {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(236, 10, 10, 0.4); }
+}
+
+@keyframes blinkYellow {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(245, 158, 11, 0.35); }
+}
+
+@keyframes blinkGreen {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(16, 185, 129, 0.3); }
+}
+
+/* Status badges */
+.status-pendiente {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+}
+
+.status-aplicada {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+.status-no-aplicada {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.status-baja {
+  background-color: rgba(139, 0, 0, 0.2);
+  color: #8b0000;
+  border: 1px solid #8b0000;
+}
+
+/* ========== VARIABLES CSS (ESTILO MARCO) ========== */
+:root {
+  --success: #10b981;
+  --success-dark: #059669;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --purple: #8b5cf6;
+}
+
+/* ========== SHIMMER-BORDER PARA MODALES (SCROLL CORREGIDO) ========== */
+.shimmer-modal {
+  position: relative;
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border-radius: 16px !important;
+  border: none !important;
+  padding: 0 !important; /* El padding lo pondremos en un contenedor interno */
+  overflow: hidden !important; /* El contenedor externo NO hace scroll */
+}
+
+/* Capa del shimmer (fija, no hace scroll) */
+.shimmer-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1.5px;
+  background: rgba(71, 85, 105, 0.4);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Shimmer animado (fijo, no hace scroll) */
+.shimmer-modal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  background: linear-gradient(
+    90deg, 
+    transparent, 
+    #10b981, 
+    #8b5cf6, 
+    #3b82f6, 
+    #10b981, 
+    transparent
+  );
+  background-size: 300% 100%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+  animation: shimmer 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.shimmer-modal:hover::after {
+  opacity: 1;
+}
+
+/* Contenedor interno que SÍ hace scroll */
+.shimmer-modal-scroll {
+  position: relative;
+  z-index: 2;
+  padding: 1.5rem; /* El padding que antes tenía .shimmer-modal */
+  max-height: inherit;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* Scrollbar para el contenedor interno */
+.shimmer-modal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.shimmer-modal-scroll::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 3px;
+}
+
+.shimmer-modal-scroll::-webkit-scrollbar-thumb {
+  background: #10b981;
+  border-radius: 3px;
+}
+
+.shimmer-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #059669;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 0; }
+  100% { background-position: 300% 0; }
+}

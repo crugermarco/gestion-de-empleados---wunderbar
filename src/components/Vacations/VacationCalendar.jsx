@@ -71,8 +71,8 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
     const occupied = {}
     const pending = {}
 
-    console.log('📅 Procesando vacaciones para área:', selectedArea)
-    console.log('📅 Año seleccionado:', currentYear)
+    console.log(' Procesando vacaciones para área:', selectedArea)
+    console.log(' Año seleccionado:', currentYear)
 
     vacationData.forEach((item) => {
       if (item['ÁREA'] !== selectedArea) return
@@ -87,7 +87,7 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
         const end = parseDate(fechaRegreso)
         
         if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
-          console.warn(`⚠️ Fecha inválida: Salida:${fechaSalida} Regreso:${fechaRegreso}`)
+          console.warn(` Fecha inválida: Salida:${fechaSalida} Regreso:${fechaRegreso}`)
           return
         }
         
@@ -96,7 +96,7 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
           return
         }
         
-        console.log(`📅 ${nombre}: ${fechaSalida} -> ${fechaRegreso} | ${autorizadas ? 'Aprobado' : 'Pendiente'}`)
+        console.log(` ${nombre}: ${fechaSalida} -> ${fechaRegreso} | ${autorizadas ? 'Aprobado' : 'Pendiente'}`)
         
         // Recorrer cada día desde start hasta end
         const current = new Date(start)
@@ -124,8 +124,8 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
       }
     })
 
-    console.log('📅 Días ocupados (rojo):', Object.keys(occupied).length)
-    console.log('📅 Días pendientes (amarillo):', Object.keys(pending).length)
+    console.log(' Días ocupados (rojo):', Object.keys(occupied).length)
+    console.log(' Días pendientes (amarillo):', Object.keys(pending).length)
     
     setOccupiedDates(occupied)
     setPendingDates(pending)
@@ -221,7 +221,7 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-      <div className="bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-600/50 p-6 max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="shimmer-modal p-6 max-w-7xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-slate-900/95 py-2">
           <h3 className="text-xl font-bold text-white">FECHAS DISPONIBLES POR ÁREA</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
