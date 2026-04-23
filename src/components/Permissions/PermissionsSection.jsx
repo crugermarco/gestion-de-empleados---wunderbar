@@ -1,41 +1,52 @@
 import React, { useState } from 'react'
 import { PermissionModal } from './PermissionModal'
+import { FileText, Printer } from 'lucide-react'
+import './PermissionsSection.css'
 
 export const PermissionsSection = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  const handleOpenModal = () => setIsModalOpen(true)
+  
+  const handleImprimirUltimo = () => {
+    const spreadsheetId = import.meta.env.VITE_PERMISSIONS_SPREADSHEET_ID
+    if (spreadsheetId) {
+      window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=pdf&gid=0`, '_blank')
+    }
+  }
+
   return (
-    <div>
-      <div className="glassmorphism-table">
-        <div className="flex justify-between items-center p-6 border-b border-slate-600/30">
-          <h3 className="text-xl font-bold text-white">Solicitud de Permisos</h3>
-          <button onClick={() => setIsModalOpen(true)} className="modern-button">
-            <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Generar Permiso
-          </button>
+    <div className="permisos-page fade-in">
+      <div className="content-header">
+        <div>
+          <h1 className="page-title">Sistema de Incidencias / Permisos</h1>
+          <p className="page-subtitle">Generación de permisos </p>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-6 bg-slate-800/30 border-b border-slate-600/30">
-          <input type="text" placeholder="Filtrar por nombre..." className="filter-input" />
-          <input type="text" placeholder="Filtrar por fecha..." className="filter-input" />
-          <input type="text" placeholder="Filtrar por tipo..." className="filter-input" />
+      </div>
+
+      <div className="permisos-container">
+        <div className="permisos-card glass-card shimmer-border">
+          <div className="permisos-header">
+            <FileText className="permisos-icon" />
+            <h2>Generar Permiso </h2>
+          </div>
+          
+          <p className="permisos-description">
+            Crea un nuevo permiso para el personal interno
+          </p>
+          
+          <div className="permisos-actions">
+            <button
+              className="modern-button text-lg py-3 px-6 w-full flex items-center justify-center gap-2"
+              onClick={handleOpenModal}
+            >
+              <FileText className="w-5 h-5" />
+              Nuevo Permiso
+            </button>
+            
+
+          </div>
         </div>
-        
-        <table className="w-full border-collapse">
-          <thead className="bg-slate-800/90">
-            <tr>
-              <th className="p-4 text-left text-slate-300 font-semibold text-sm uppercase">Nombre</th>
-              <th className="p-4 text-left text-slate-300 font-semibold text-sm uppercase">Fecha</th>
-              <th className="p-4 text-left text-slate-300 font-semibold text-sm uppercase">Tipo de Permiso</th>
-              <th className="p-4 text-left text-slate-300 font-semibold text-sm uppercase">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colSpan="4" className="p-8 text-center text-slate-400">Los permisos generados aparecerán aquí</td></tr>
-          </tbody>
-        </table>
       </div>
 
       <PermissionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
