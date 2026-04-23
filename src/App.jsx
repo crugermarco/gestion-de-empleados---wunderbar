@@ -8,6 +8,7 @@ import { VacationsSection } from './components/Vacations/VacationsSection'
 import { PermissionsSection } from './components/Permissions/PermissionsSection'
 import { RotationSection } from './components/Rotation/RotationSection'
 import { EmployeesSection } from './components/Employees/EmployeesSection'
+import BackgroundEffect from './components/UI/BackgroundEffect' // ← NUEVO
 
 const AppContent = () => {
   const [activeSection, setActiveSection] = useState('asistencias')
@@ -60,12 +61,8 @@ const AppContent = () => {
 function App() {
   return (
     <AuthProvider>
-      <div className="fixed inset-0 z-0 opacity-90 overflow-hidden">
-        <div className="absolute top-[10%] left-[10%] w-[300px] h-[300px] bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse-slow"></div>
-        <div className="absolute top-[70%] right-[15%] w-[250px] h-[250px] bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-[20%] left-[20%] w-[400px] h-[400px] bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse-slow" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute top-[5%] left-[60%] w-[570px] h-[570px] bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse-slow" style={{ animationDelay: '4s' }}></div>
-      </div>
+      {/* NUEVO: Background Effect Premium */}
+      <BackgroundEffect />
       
       <AppContent />
     </AuthProvider>
