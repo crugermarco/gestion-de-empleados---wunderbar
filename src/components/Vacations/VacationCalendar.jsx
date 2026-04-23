@@ -221,7 +221,8 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-      <div className="shimmer-modal p-6 max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="shimmer-modal max-w-7xl w-full max-h-[90vh]">
+      <div className="shimmer-modal-scroll">
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-slate-900/95 py-2">
           <h3 className="text-xl font-bold text-white">FECHAS DISPONIBLES POR ÁREA</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
@@ -272,6 +273,7 @@ export const VacationCalendar = ({ vacationData, onClose, onSelectDate }) => {
         <div className="flex justify-end mt-6">
           <button onClick={onClose} className="modern-button">Cerrar</button>
         </div>
+      </div>
       </div>
     </div>
   )
