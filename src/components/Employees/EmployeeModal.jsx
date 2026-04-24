@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { googleSheetsService } from '../../services/googleSheetsService'
+import { employeesSupabaseService } from '../../services/employeesSupabaseService'
 import { formatDateForInput } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 
@@ -24,15 +24,14 @@ export const EmployeeModal = ({ isOpen, onClose, onSuccess, employee }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.nombre || !formData.numeroEmpleado) {
-      showNotification('Nombre y número de empleado son obligatorios', 'error')
-      return
-    }
+    
+    console.log('fechaIngreso del form:', formData.fechaIngreso)
     
     let fechaFormateada = ''
     if (formData.fechaIngreso) {
       const [year, month, day] = formData.fechaIngreso.split('-')
       fechaFormateada = `${month}/${day}/${year}`
+      console.log('fechaFormateada:', fechaFormateada)
     }
     
     const employeeData = {
@@ -44,9 +43,9 @@ export const EmployeeModal = ({ isOpen, onClose, onSuccess, employee }) => {
     setLoading(true)
     let result
     if (employee) {
-      result = await googleSheetsService.updateEmployee({ NOMBRE: employee.NOMBRE, 'NUMERO DE EMPLEADO': employee['NUMERO DE EMPLEADO'] }, employeeData)
+      result = await employeesSupabaseService.update(employee['NUMERO DE EMPLEADO'], employeeData)
     } else {
-      result = await googleSheetsService.addEmployee(employeeData)
+      result = await employeesSupabaseService.add(employeeData)
     }
     
     if (!result.error) {

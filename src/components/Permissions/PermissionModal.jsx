@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { googleSheetsService } from '../../services/googleSheetsService'
+import { employeesSupabaseService } from '../../services/employeesSupabaseService'
 import { convertTo24Hour } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 
@@ -29,7 +29,7 @@ export const PermissionModal = ({ isOpen, onClose }) => {
   }, [isOpen])
 
   const loadEmployees = async () => {
-    const result = await googleSheetsService.getEmployees()
+    const result = await employeesSupabaseService.getAll()
     if (!result.error && result.data) setEmployees(result.data)
   }
 

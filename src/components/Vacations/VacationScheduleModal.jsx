@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { vacationsSupabaseService } from '../../services/vacationsSupabaseService'
+import { employeesSupabaseService } from '../../services/employeesSupabaseService'
 import { formatDate, formatDateForSheet, isNonWorkingDay } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
-import { googleSheetsService } from '../../services/googleSheetsService'
 
 export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -17,7 +17,7 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false)
   const [calculationInfo, setCalculationInfo] = useState('')
   const [payDateOptions, setPayDateOptions] = useState([])
-  const [payDateType, setPayDateType] = useState('') // '', 'semanal', 'fecha'
+  const [payDateType, setPayDateType] = useState('')
   const [customPayDate, setCustomPayDate] = useState('')
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
   }, [isOpen])
 
   const loadEmployees = async () => {
-    const result = await googleSheetsService.getEmployees()
+    const result = await employeesSupabaseService.getAll()
     if (!result.error && result.data) setEmployees(result.data)
   }
 
@@ -37,12 +37,11 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
     const fridays = []
     const currentYear = today.getFullYear()
     
-    // Generar todos los viernes del año actual y siguiente
     for (let year = currentYear; year <= currentYear + 1; year++) {
       for (let month = 0; month < 12; month++) {
         const date = new Date(year, month, 1)
         while (date.getMonth() === month) {
-          if (date.getDay() === 5) { // 5 = Viernes
+          if (date.getDay() === 5) {
             fridays.push(new Date(date))
           }
           date.setDate(date.getDate() + 1)
@@ -50,7 +49,6 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
       }
     }
     
-    // Formatear cada viernes a mm/dd/yyyy
     const options = fridays.map(friday => {
       const month = (friday.getMonth() + 1).toString().padStart(2, '0')
       const day = friday.getDate().toString().padStart(2, '0')
@@ -68,7 +66,6 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
       setFormData(prev => ({ ...prev, payDate: 'PAGO POR SEMANA' }))
       setCustomPayDate('')
     } else if (type === 'fecha') {
-      // Si ya hay fecha de salida, autocompletar con el viernes anterior
       if (formData.startDate) {
         const startDate = new Date(formData.startDate)
         startDate.setHours(0, 0, 0, 0)
@@ -102,7 +99,6 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
     setFormData(prev => ({ ...prev, payDate: date }))
   }
 
-  // Actualizar fecha de pago cuando cambia la fecha de salida (solo si está en modo 'fecha')
   useEffect(() => {
     if (payDateType === 'fecha' && formData.startDate && payDateOptions.length > 0) {
       const startDate = new Date(formData.startDate)
@@ -246,7 +242,7 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
         <div style="background: rgba(15, 23, 42, 0.6); padding: 0.75rem; border-radius: 0.375rem; margin-bottom: 1rem;">
           <strong style="color: #94a3b8;">Cálculo de días laborales:</strong><br>
           <span style="color: #94a3b8;">
-            ${daysToTake.toFixed(1)} días de vacaciones ÷ ${VACATION_DAY_VALUE} = ${exactWorkDays.toFixed(2)} días laborales<br>
+            ${daysToTake.toFixed(1)} días de vacaciones \u00f7 ${VACATION_DAY_VALUE} = ${exactWorkDays.toFixed(2)} días laborales<br>
             Días laborales requeridos: ${workDaysNeeded}<br>
             Días laborales durante vacaciones: ${workDaysCounted}<br>
             Días no laborales durante vacaciones: ${nonWorkingDaysCount} días
@@ -353,99 +349,99 @@ export const VacationScheduleModal = ({ isOpen, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-      <div className="shimmer-modal max-w-[500px] w-full max-h-[85vh]">
-      <div className="shimmer-modal-scroll">
-        <div className="flex justify-between items-center mb-6 sticky top-0 bg-slate-900/95 py-2">
-          <h3 className="text-xl font-bold text-white">AGENDAR VACACIONES</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
-        </div>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4 relative">
-            <label className="form-label">Nombre del Empleado *</label>
-            <input type="text" className="form-input" value={formData.employeeName} onChange={(e) => handleEmployeeSearch(e.target.value)} required />
-            {suggestions.length > 0 && (
-              <div className="absolute z-10 w-full bg-slate-800 border border-slate-600 rounded-lg mt-1 max-h-48 overflow-y-auto">
-                {suggestions.map((emp, idx) => <div key={idx} className="p-2 cursor-pointer hover:bg-slate-700" onClick={() => selectEmployee(emp)}>{emp.NOMBRE}</div>)}
-              </div>
-            )}
+      <div className="shimmer-modal max-w-[700px] w-full max-h-[90vh]">
+        <div className="shimmer-modal-scroll">
+          <div className="flex justify-between items-center mb-6 sticky top-0 bg-slate-900/95 py-2">
+            <h3 className="text-xl font-bold text-white">AGENDAR VACACIONES</h3>
+            <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div><label className="form-label">Fecha de Ingreso</label><input type="text" className="form-input" value={formData.entryDate} readOnly /></div>
-            <div><label className="form-label">Número de Empleado</label><input type="text" className="form-input" value={formData.employeeId} readOnly /></div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div><label className="form-label">Área</label><input type="text" className="form-input" value={formData.area} readOnly /></div>
-            <div><label className="form-label">Días Disponibles</label><input type="text" className="form-input" value={formData.vacationDays} readOnly /></div>
-          </div>
-          
-          <div className="mb-4">
-            <label className="form-label">Fecha de Pago</label>
-            <select 
-              className="form-input" 
-              value={payDateType} 
-              onChange={(e) => handlePayDateTypeChange(e.target.value)}
-            >
-              <option value="">Seleccionar fecha de pago</option>
-              <option value="fecha">Seleccionar fecha de pago</option>
-              <option value="semanal">PAGO POR SEMANA</option>
-            </select>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4 relative">
+              <label className="form-label">Nombre del Empleado *</label>
+              <input type="text" className="form-input" value={formData.employeeName} onChange={(e) => handleEmployeeSearch(e.target.value)} required />
+              {suggestions.length > 0 && (
+                <div className="absolute z-10 w-full bg-slate-800 border border-slate-600 rounded-lg mt-1 max-h-48 overflow-y-auto">
+                  {suggestions.map((emp, idx) => <div key={idx} className="p-2 cursor-pointer hover:bg-slate-700" onClick={() => selectEmployee(emp)}>{emp.NOMBRE}</div>)}
+                </div>
+              )}
+            </div>
             
-            {payDateType === 'fecha' && (
-              <div className="mt-3">
-                <label className="form-label">Seleccionar fecha específica</label>
-                <select 
-                  className="form-input" 
-                  value={customPayDate} 
-                  onChange={(e) => handleCustomPayDateChange(e.target.value)}
-                >
-                  <option value="">Seleccionar una fecha</option>
-                  {payDateOptions.map((opt, idx) => (
-                    <option key={idx} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <small className="text-slate-400 block mt-1">
-                  {formData.startDate ? 'Viernes de pago más cercano antes de la fecha de salida' : 'Seleccione primero la fecha de salida para autocompletar'}
-                </small>
-              </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div><label className="form-label">Fecha de Ingreso</label><input type="text" className="form-input" value={formData.entryDate} readOnly /></div>
+              <div><label className="form-label">Número de Empleado</label><input type="text" className="form-input" value={formData.employeeId} readOnly /></div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div><label className="form-label">Área</label><input type="text" className="form-input" value={formData.area} readOnly /></div>
+              <div><label className="form-label">Días Disponibles</label><input type="text" className="form-input" value={formData.vacationDays} readOnly /></div>
+            </div>
+            
+            <div className="mb-4">
+              <label className="form-label">Fecha de Pago</label>
+              <select 
+                className="form-input" 
+                value={payDateType} 
+                onChange={(e) => handlePayDateTypeChange(e.target.value)}
+              >
+                <option value="">Seleccionar fecha de pago</option>
+                <option value="fecha">Seleccionar fecha de pago</option>
+                <option value="semanal">PAGO POR SEMANA</option>
+              </select>
+              
+              {payDateType === 'fecha' && (
+                <div className="mt-3">
+                  <label className="form-label">Seleccionar fecha específica</label>
+                  <select 
+                    className="form-input" 
+                    value={customPayDate} 
+                    onChange={(e) => handleCustomPayDateChange(e.target.value)}
+                  >
+                    <option value="">Seleccionar una fecha</option>
+                    {payDateOptions.map((opt, idx) => (
+                      <option key={idx} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <small className="text-slate-400 block mt-1">
+                    {formData.startDate ? 'Viernes de pago más cercano antes de la fecha de salida' : 'Seleccione primero la fecha de salida para autocompletar'}
+                  </small>
+                </div>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div><label className="form-label">Fecha de Salida *</label><input type="date" className="form-input" min={todayFormatted} value={formData.startDate} onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))} required /></div>
+              <div><label className="form-label">Fecha de Regreso</label><input type="text" className="form-input" value={formData.returnDate} readOnly /></div>
+            </div>
+            
+            <div className="mb-4">
+              <label className="form-label">Días a Tomar *</label>
+              <input type="number" className="form-input" min="1.2" step="1.2" value={formData.daysToTake} onChange={(e) => setFormData(prev => ({ ...prev, daysToTake: parseFloat(e.target.value) || 0 }))} required />
+              <small className="text-slate-400">1 día de vacaciones = 1.2 días laborales</small>
+            </div>
+            
+            <div className="mb-4">
+              <label className="form-label">Guardar para Diciembre</label>
+              <input type="number" className="form-input" min="0" step="1.2" value={formData.decemberSave} onChange={(e) => setFormData(prev => ({ ...prev, decemberSave: parseFloat(e.target.value) || 0 }))} />
+            </div>
+            
+            {calculationInfo && (
+              <div className="mb-4" dangerouslySetInnerHTML={{ __html: calculationInfo }} />
             )}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div><label className="form-label">Fecha de Salida *</label><input type="date" className="form-input" min={todayFormatted} value={formData.startDate} onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))} required /></div>
-            <div><label className="form-label">Fecha de Regreso</label><input type="text" className="form-input" value={formData.returnDate} readOnly /></div>
-          </div>
-          
-          <div className="mb-4">
-            <label className="form-label">Días a Tomar *</label>
-            <input type="number" className="form-input" min="1.2" step="1.2" value={formData.daysToTake} onChange={(e) => setFormData(prev => ({ ...prev, daysToTake: parseFloat(e.target.value) || 0 }))} required />
-            <small className="text-slate-400">1 día de vacaciones = 1.2 días laborales</small>
-          </div>
-          
-          <div className="mb-4">
-            <label className="form-label">Guardar para Diciembre</label>
-            <input type="number" className="form-input" min="0" step="1.2" value={formData.decemberSave} onChange={(e) => setFormData(prev => ({ ...prev, decemberSave: parseFloat(e.target.value) || 0 }))} />
-          </div>
-          
-          {calculationInfo && (
-            <div className="mb-4" dangerouslySetInnerHTML={{ __html: calculationInfo }} />
-          )}
-          
-          <div className="mb-4">
-            <label className="flex items-center justify-between cursor-pointer p-2">
-              <span className="text-slate-300 font-semibold">Autorizadas</span>
-              <input type="checkbox" className="hidden" checked={formData.authorized} onChange={(e) => setFormData(prev => ({ ...prev, authorized: e.target.checked }))} />
-              <span className={`relative w-11 h-6 rounded-full transition-all duration-300 ${formData.authorized ? 'bg-emerald-500' : 'bg-slate-600'} before:content-[""] before:absolute before:w-5 before:h-5 before:bg-white before:rounded-full before:transition-all before:duration-300 ${formData.authorized ? 'before:translate-x-5' : 'before:translate-x-0.5'} before:top-0.5`}></span>
-            </label>
-          </div>
-          
-          <div className="flex justify-end gap-4 mt-6 sticky bottom-0 bg-slate-900/95 py-2">
-            <button type="button" onClick={onClose} className="cancel-button">Cancelar</button>
-            <button type="submit" disabled={loading} className="modern-button">{loading ? 'Guardando...' : 'Guardar Vacaciones'}</button>
-          </div>
-        </form>
+            
+            <div className="mb-4">
+              <label className="flex items-center justify-between cursor-pointer p-2">
+                <span className="text-slate-300 font-semibold">Autorizadas</span>
+                <input type="checkbox" className="hidden" checked={formData.authorized} onChange={(e) => setFormData(prev => ({ ...prev, authorized: e.target.checked }))} />
+                <span className={`relative w-11 h-6 rounded-full transition-all duration-300 ${formData.authorized ? 'bg-emerald-500' : 'bg-slate-600'} before:content-[""] before:absolute before:w-5 before:h-5 before:bg-white before:rounded-full before:transition-all before:duration-300 ${formData.authorized ? 'before:translate-x-5' : 'before:translate-x-0.5'} before:top-0.5`}></span>
+              </label>
+            </div>
+            
+            <div className="flex justify-end gap-4 mt-6 sticky bottom-0 bg-slate-900/95 py-2">
+              <button type="button" onClick={onClose} className="cancel-button">Cancelar</button>
+              <button type="submit" disabled={loading} className="modern-button">{loading ? 'Guardando...' : 'Guardar Vacaciones'}</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

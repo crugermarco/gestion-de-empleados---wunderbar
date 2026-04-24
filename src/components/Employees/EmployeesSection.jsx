@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { googleSheetsService } from '../../services/googleSheetsService'
+import { employeesSupabaseService } from '../../services/employeesSupabaseService'
 import { formatDate } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
 import { EmployeeModal } from './EmployeeModal'
@@ -20,7 +20,7 @@ export const EmployeesSection = () => {
 
   const loadEmployees = async () => {
     setLoading(true)
-    const result = await googleSheetsService.getEmployees()
+    const result = await employeesSupabaseService.getAll()
     if (!result.error && result.data) {
       setEmployees(result.data)
       setFilteredEmployees(result.data)
@@ -40,7 +40,7 @@ export const EmployeesSection = () => {
 
   const handleDelete = async (employee, index) => {
     if (confirm(`¿Eliminar a ${employee.NOMBRE}?`)) {
-      const result = await googleSheetsService.deleteEmployee({ NOMBRE: employee.NOMBRE, 'NUMERO DE EMPLEADO': employee['NUMERO DE EMPLEADO'] })
+      const result = await employeesSupabaseService.remove(employee['NUMERO DE EMPLEADO'])
       if (!result.error) {
         employees.splice(index, 1)
         setEmployees([...employees])
@@ -48,8 +48,6 @@ export const EmployeesSection = () => {
       } else showNotification('Error al eliminar', 'error')
     }
   }
-
-
 
   const isImageUrl = (url) => url && (url.includes('http') || url.includes('https') || url.includes('.jpg') || url.includes('.png') || url.includes('drive.google.com'))
 
@@ -85,7 +83,18 @@ export const EmployeesSection = () => {
               {loading ? <tr><td colSpan="8" className="p-8 text-center text-slate-400">Cargando datos...</td></tr> : filteredEmployees.length === 0 ? <tr><td colSpan="8" className="p-8 text-center text-slate-400">No hay empleados registrados</td></tr> : filteredEmployees.map((emp, idx) => (
                 <tr key={idx} className="border-b border-slate-600/30 hover:bg-slate-800/50">
                   <td className="p-3">{emp.NOMBRE || ''}</td>
-                  <td className="p-3">{isImageUrl(emp.GAFETE) ? <img src={emp.GAFETE} alt="Gafete" className="max-w-[50px] max-h-[50px] rounded object-cover cursor-pointer hover:scale-105" onClick={() => setViewingEmployee(emp)} /> : (emp.GAFETE || '-')}</td>
+                  <td className="p-3">
+                    {isImageUrl(emp.GAFETE) ? (
+                      <img
+                        src={emp.GAFETE}
+                        alt="Gafete"
+                        className="max-w-[50px] max-h-[50px] rounded object-cover cursor-pointer hover:scale-105"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
+                        onClick={() => setViewingEmployee(emp)}
+                      />
+                    ) : (emp.GAFETE || '-')}
+                  </td>
                   <td className="p-3">{formatDate(emp['FECHA DE INGRESO'])}</td>
                   <td className="p-3">{emp['NUMERO DE EMPLEADO'] || ''}</td>
                   <td className="p-3">{emp.AREA || ''}</td>

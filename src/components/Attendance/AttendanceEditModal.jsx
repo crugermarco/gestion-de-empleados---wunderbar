@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { attendanceSupabaseService } from '../../services/attendanceSupabaseService'
+import { employeesSupabaseService } from '../../services/employeesSupabaseService'
 import { showNotification } from '../UI/NotificationContainer'
 
 export const AttendanceEditModal = ({ isOpen, onClose, attendance, onUpdate }) => {
