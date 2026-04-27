@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { employeesSupabaseService } from '../../services/employeesSupabaseService'
 import { convertTo24Hour } from '../../utils/dateFormatters'
 import { showNotification } from '../UI/NotificationContainer'
+import { googleSheetsService } from '../../services/googleSheetsService'
 
 export const PermissionModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
