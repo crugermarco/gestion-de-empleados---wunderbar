@@ -56,6 +56,7 @@ export const employeesSupabaseService = {
         nombre: employeeData.NOMBRE,
         gafete: employeeData.GAFETE || null,
         fecha_ingreso: employeeData['FECHA DE INGRESO'] || null,
+        numero_empleado: employeeData['NUMERO DE EMPLEADO'],
         area: employeeData.AREA || null,
         anos: parseFloat(employeeData.AÑOS) || 0,
         dias_vacaciones: parseFloat(employeeData['DIAS DE VACACIONES']) || 0
